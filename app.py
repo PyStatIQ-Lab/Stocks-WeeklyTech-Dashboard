@@ -55,13 +55,6 @@ st.markdown("""
         margin-bottom: 20px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
-    .indicator-card {
-        background-color: white;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 15px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -109,15 +102,12 @@ def display_technical_indicators(data, stock_name):
         st.warning("No technical indicator data available for this stock.")
         return
     
-    # Check the actual structure of the API response
-    if 'data' not in data or 'techindicator' not in data['data']:
-        st.warning("Technical indicators not found in the response. The API structure may have changed.")
-        with st.expander("View Raw API Response"):
-            st.json(data)
-        return
+    indicators = data.get('data', {}).get('techindicator', [])
+    price_data = data.get('data', {}).get('priceinfo', {})
     
-    indicators = data['data']['techindicator']
-    price_data = data['data'].get('priceinfo', {})
+    if not indicators:
+        st.warning("No technical indicators found in the response.")
+        return
     
     # Create a card for the stock
     with st.container():
@@ -130,6 +120,7 @@ def display_technical_indicators(data, stock_name):
         with col2:
             change = price_data.get('change', 0)
             change_pct = price_data.get('percentchange', 0)
+            change_color = "positive" if float(change) >= 0 else "negative"
             st.metric("Change", f"₹{change}", f"{change_pct}%", delta_color="normal")
         with col3:
             st.metric("High", f"₹{price_data.get('high', 'N/A')}")
@@ -148,72 +139,45 @@ def display_technical_indicators(data, stock_name):
     volume_indicators = []
     
     for indicator in indicators:
-        name = indicator.get('name', '').lower()
-        value = indicator.get('value', 'N/A')
-        signal = indicator.get('signal', 'N/A')
-        action = indicator.get('action', 'N/A')
-        
-        # Create indicator card
-        indicator_card = {
-            'name': indicator.get('name', 'Indicator'),
-            'value': value,
-            'signal': signal,
-            'action': action
-        }
-        
-        if 'ma' in name or 'moving average' in name or 'ema' in name:
-            trend_indicators.append(indicator_card)
-        elif 'rsi' in name or 'stochastic' in name or 'momentum' in name or 'macd' in name:
-            momentum_indicators.append(indicator_card)
-        elif 'bollinger' in name or 'atr' in name or 'volatility' in name:
-            volatility_indicators.append(indicator_card)
-        elif 'volume' in name or 'obv' in name:
-            volume_indicators.append(indicator_card)
+        name = indicator.get('name', '')
+        if 'MA' in name or 'Moving Average' in name or 'EMA' in name:
+            trend_indicators.append(indicator)
+        elif 'RSI' in name or 'Stochastic' in name or 'Momentum' in name or 'MACD' in name:
+            momentum_indicators.append(indicator)
+        elif 'Bollinger' in name or 'ATR' in name or 'Volatility' in name:
+            volatility_indicators.append(indicator)
+        elif 'Volume' in name or 'OBV' in name:
+            volume_indicators.append(indicator)
         else:
-            trend_indicators.append(indicator_card)  # Default to trend
+            trend_indicators.append(indicator)  # Default to trend
     
     # Display indicators in columns
     with col1:
         st.subheader("Trend Indicators")
         for indicator in trend_indicators:
-            with st.container():
-                st.markdown(f"""
-                <div class="indicator-card">
-                    <h4>{indicator['name']}</h4>
-                    <p><strong>Value:</strong> {indicator['value']}</p>
-                    <p><strong>Signal:</strong> {indicator['signal']}</p>
-                    <p><strong>Action:</strong> <span class="{'positive' if indicator['action'].lower() == 'buy' else 'negative'}">{indicator['action']}</span></p>
-                </div>
-                """, unsafe_allow_html=True)
+            with st.expander(f"{indicator.get('name', 'Indicator')}"):
+                st.write(f"Value: {indicator.get('value', 'N/A')}")
+                st.write(f"Signal: {indicator.get('signal', 'N/A')}")
+                st.write(f"Action: {indicator.get('action', 'N/A')}")
     
     with col2:
         st.subheader("Momentum Indicators")
         for indicator in momentum_indicators:
-            with st.container():
-                st.markdown(f"""
-                <div class="indicator-card">
-                    <h4>{indicator['name']}</h4>
-                    <p><strong>Value:</strong> {indicator['value']}</p>
-                    <p><strong>Signal:</strong> {indicator['signal']}</p>
-                    <p><strong>Action:</strong> <span class="{'positive' if indicator['action'].lower() == 'buy' else 'negative'}">{indicator['action']}</span></p>
-                </div>
-                """, unsafe_allow_html=True)
+            with st.expander(f"{indicator.get('name', 'Indicator')}"):
+                st.write(f"Value: {indicator.get('value', 'N/A')}")
+                st.write(f"Signal: {indicator.get('signal', 'N/A')}")
+                st.write(f"Action: {indicator.get('action', 'N/A')}")
     
     with col3:
         st.subheader("Volatility & Volume")
         for indicator in volatility_indicators + volume_indicators:
-            with st.container():
-                st.markdown(f"""
-                <div class="indicator-card">
-                    <h4>{indicator['name']}</h4>
-                    <p><strong>Value:</strong> {indicator['value']}</p>
-                    <p><strong>Signal:</strong> {indicator['signal']}</p>
-                    <p><strong>Action:</strong> <span class="{'positive' if indicator['action'].lower() == 'buy' else 'negative'}">{indicator['action']}</span></p>
-                </div>
-                """, unsafe_allow_html=True)
+            with st.expander(f"{indicator.get('name', 'Indicator')}"):
+                st.write(f"Value: {indicator.get('value', 'N/A')}")
+                st.write(f"Signal: {indicator.get('signal', 'N/A')}")
+                st.write(f"Action: {indicator.get('action', 'N/A')}")
     
     # Show raw data in expander
-    with st.expander("View Raw API Response"):
+    with st.expander("View Raw Data"):
         st.json(data)
 
 # Main app
@@ -223,9 +187,6 @@ def main():
     
     # Load stock symbols
     stock_symbols = load_stock_symbols()
-    
-    if not stock_symbols:
-        st.stop()
     
     # Search options
     search_option = st.radio("Search by:", ["Symbol", "Multiple Symbols"])
@@ -260,7 +221,7 @@ def main():
                         else:
                             st.error("Could not find stock on MoneyControl.")
                     else:
-                        st.error(f"Failed to fetch ISIN from NSE. Status code: {r.status_code}")
+                        st.error("Failed to fetch ISIN from NSE.")
                 except Exception as e:
                     st.error(f"An error occurred: {str(e)}")
     
@@ -268,7 +229,7 @@ def main():
         # Multiple stock search
         selected_symbols = st.multiselect("Select multiple stock symbols:", stock_symbols)
         
-        if st.button("Get Technical Indicators") and selected_symbols:
+        if st.button("Get Technical Indicators"):
             for symbol in selected_symbols:
                 with st.spinner(f"Fetching data for {symbol}..."):
                     try:
@@ -295,7 +256,7 @@ def main():
                             else:
                                 st.error(f"Could not find {symbol} on MoneyControl.")
                         else:
-                            st.error(f"Failed to fetch ISIN for {symbol} from NSE. Status code: {r.status_code}")
+                            st.error(f"Failed to fetch ISIN for {symbol} from NSE.")
                     except Exception as e:
                         st.error(f"An error occurred for {symbol}: {str(e)}")
     
